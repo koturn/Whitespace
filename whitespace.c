@@ -108,7 +108,14 @@ static void
 gen_io_code(unsigned char **bytecode_ptr, const char **code_ptr);
 
 static void
-gen_flow_code(unsigned char **bytecode_ptr, unsigned char *base, const char **code_ptr);
+gen_flow_code(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base);
+
+
+static void
+process_label_define(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base);
+
+static void
+process_label_jump(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base);
 
 static LabelInfo *
 search_label(const char *label);
@@ -500,7 +507,7 @@ compile(unsigned char *bytecode, size_t *bytecode_size, const char *code)
         }
         break;
       case '\n':  /* Flow Control */
-        gen_flow_code(&bytecode, base, &code);
+        gen_flow_code(&bytecode, &code, base);
         break;
     }
   }
@@ -639,61 +646,26 @@ gen_heap_code(unsigned char **bytecode_ptr, const char **code_ptr)
  * @brief Generate bytecode about flow control
  * @param [out]    bytecode_ptr  Pointer to bytecode buffer
  * @param [in,out] code_ptr      pointer to whitespace source code
+ * @param [in]     base          Base address of the bytecode buffer
  */
 static void
-gen_flow_code(unsigned char **bytecode_ptr, unsigned char *base, const char **code_ptr)
+gen_flow_code(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base)
 {
   unsigned char *bytecode = *bytecode_ptr;
   const char *code = *code_ptr;
-  LabelInfo *label_info = NULL;
-  char *label;
   switch (*++code) {
     case ' ':
       switch (*++code) {
         case ' ':
-          label = read_label(&code);
-          label_info = search_label(label);
-          if (label_info == NULL) {
-            add_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-          } else {
-            if (label_info->addr == -1) {
-              int i;
-              for (i = 0; i < label_info->n_undef; i++) {
-                *((WsInt *) &base[label_info->undef_list[i]]) = (WsInt) ADDR_DIFF(bytecode, base);
-              }
-              label_info->addr = (WsInt) ADDR_DIFF(bytecode, base);
-              free(label_info->undef_list);
-              label_info->undef_list = NULL;
-            } else {
-              fputs("Duplicate label definition\n", stderr);
-            }
-          }
+          process_label_define(&bytecode, &code, base);
           break;
         case '\t':
           *bytecode++ = FLOW_GOSUB;
-          label = read_label(&code);
-          label_info = search_label(label);
-          if (label_info == NULL) {
-            add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-          } else if (label_info->addr == -1) {
-            label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
-          } else {
-            *((WsInt *) bytecode) = label_info->addr;
-          }
-          bytecode += sizeof(WsInt);
+          process_label_jump(&bytecode, &code, base);
           break;
         case '\n':
           *bytecode++ = FLOW_JUMP;
-          label = read_label(&code);
-          label_info = search_label(label);
-          if (label_info == NULL) {
-            add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-          } else if (label_info->addr == -1) {
-            label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
-          } else {
-            *((WsInt *) bytecode) = label_info->addr;
-          }
-          bytecode += sizeof(WsInt);
+          process_label_jump(&bytecode, &code, base);
           break;
       }
       break;
@@ -701,29 +673,11 @@ gen_flow_code(unsigned char **bytecode_ptr, unsigned char *base, const char **co
       switch (*++code) {
         case ' ':
           *bytecode++ = FLOW_BEZ;
-          label = read_label(&code);
-          label_info = search_label(label);
-          if (label_info == NULL) {
-            add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-          } else if (label_info->addr == -1) {
-            label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
-          } else {
-            *((WsInt *) bytecode) = label_info->addr;
-          }
-          bytecode += sizeof(WsInt);
+          process_label_jump(&bytecode, &code, base);
           break;
         case '\t':
           *bytecode++ = FLOW_BLTZ;
-          label = read_label(&code);
-          label_info = search_label(label);
-          if (label_info == NULL) {
-            add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-          } else if (label_info->addr == -1) {
-            label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
-          } else {
-            *((WsInt *) bytecode) = label_info->addr;
-          }
-          bytecode += sizeof(WsInt);
+          process_label_jump(&bytecode, &code, base);
           break;
         case '\n':
           *bytecode++ = FLOW_ENDSUB;
@@ -789,7 +743,6 @@ gen_io_code(unsigned char **bytecode_ptr, const char **code_ptr)
 }
 
 
-
 /*!
  * @brief Check given label is already defined or not
  *
@@ -807,6 +760,69 @@ search_label(const char *label)
     }
   }
   return NULL;
+}
+
+
+/*!
+ * @brief Write where to jump to the bytecode
+ * @param [out]    bytecode_ptr  Pointer to bytecode buffer
+ * @param [in,out] code_ptr      pointer to whitespace source code
+ * @param [in]     base          Base address of the bytecode buffer
+ */
+static void
+process_label_define(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base)
+{
+  const char *code = *code_ptr;
+  unsigned char *bytecode = *bytecode_ptr;
+  char *label = read_label(&code);
+  LabelInfo *label_info = search_label(label);
+
+  if (label_info == NULL) {
+    add_label(label, (WsInt) ADDR_DIFF(bytecode, base));
+  } else {
+    if (label_info->addr == -1) {
+      int i;
+      for (i = 0; i < label_info->n_undef; i++) {
+        *((WsInt *) &base[label_info->undef_list[i]]) = (WsInt) ADDR_DIFF(bytecode, base);
+      }
+      label_info->addr = (WsInt) ADDR_DIFF(bytecode, base);
+      free(label_info->undef_list);
+      label_info->undef_list = NULL;
+    } else {
+      fputs("Duplicate label definition\n", stderr);
+    }
+  }
+  *code_ptr = code;
+  *bytecode_ptr = bytecode;
+}
+
+
+/*!
+ * @brief Write where to jump to the bytecode
+ *
+ * If label is not defined yet, write it after label is defined.
+ * @param [out]    bytecode_ptr  Pointer to bytecode buffer
+ * @param [in,out] code_ptr      pointer to whitespace source code
+ * @param [in]     base          Base address of the bytecode buffer
+ */
+static void
+process_label_jump(unsigned char **bytecode_ptr, const char **code_ptr, unsigned char *base)
+{
+  const char *code = *code_ptr;
+  unsigned char *bytecode = *bytecode_ptr;
+  char *label = read_label(&code);
+  LabelInfo *label_info = search_label(label);
+
+  if (label_info == NULL) {
+    add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
+  } else if (label_info->addr == -1) {
+    label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
+  } else {
+    *((WsInt *) bytecode) = label_info->addr;
+  }
+  bytecode += sizeof(WsInt);
+  *code_ptr = code;
+  *bytecode_ptr = bytecode;
 }
 
 

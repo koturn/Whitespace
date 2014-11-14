@@ -37,7 +37,7 @@ Options                            | Function
 
 ## Build
 
-Use [Makefile](Makefile). 
+Use [Makefile](Makefile).
 
 ```
 $ make

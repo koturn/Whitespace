@@ -217,14 +217,18 @@ main(int argc, char *argv[])
     fprintf(stderr, "Invalid arguments\n");
     return EXIT_FAILURE;
   }
-  if ((ifp = fopen(param.in_filename, "r")) == NULL) {
+  if (!strcmp(param.in_filename, "-")) {
+    ifp = stdin;
+  } else if ((ifp = fopen(param.in_filename, "r")) == NULL) {
     fprintf(stderr, "Unable to open file: %s\n", argv[1]);
     return EXIT_FAILURE;
   }
   if (!read_file(ifp, code, LENGTHOF(code))) {
     return EXIT_FAILURE;
   }
-  fclose(ifp);
+  if (ifp != stdin) {
+    fclose(ifp);
+  }
 
   switch (param.mode) {
     case 'b':

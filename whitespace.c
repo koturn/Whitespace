@@ -36,6 +36,9 @@
 #ifndef WS_INT
 #  define WS_INT  int
 #endif
+#ifndef WS_ADDR_INT
+#  define WS_ADDR_INT  unsigned int
+#endif
 #ifndef INDENT_STR
 #  define INDENT_STR  "  "
 #endif
@@ -45,6 +48,10 @@
 #define LENGTHOF(array)  (sizeof(array) / sizeof((array)[0]))
 #define ADDR_DIFF(a, b) \
   ((const unsigned char *) (a) - (const unsigned char *) (b))
+#define IS_SIGNED_INT(itype)  ((itype) (-1) < 0)
+#define BITSIZEOF(var)   (sizeof(var) << 3)
+#define Imax(itype) \
+  (IS_SIGNED_INT(itype) ? (itype) ~((itype) 1 << (BITSIZEOF(itype) - 1)) : (itype) ~(itype) 0)
 #define SWAP(type, a, b) \
   do { \
     type __tmp_swap_var__ = *(a); \
@@ -63,7 +70,8 @@ enum OpCode {
 };
 
 
-typedef WS_INT WsInt;
+typedef WS_INT  WsInt;
+typedef WS_ADDR_INT  WsAddrInt;
 
 typedef struct {
   const char *in_filename;
@@ -72,10 +80,10 @@ typedef struct {
 } Param;
 
 typedef struct {
-  int   addr;
-  int   n_undef;
-  char *label;
-  int  *undef_list;
+  WsAddrInt  addr;
+  int        n_undef;
+  char      *label;
+  WsAddrInt *undef_list;
 } LabelInfo;
 
 
@@ -121,19 +129,19 @@ static LabelInfo *
 search_label(const char *label);
 
 static void
-add_label(const char *_label, WsInt addr);
+add_label(const char *_label, WsAddrInt addr);
 
 static void
-add_undef_label(const char *_label, WsInt pos);
+add_undef_label(const char *_label, WsAddrInt pos);
 
 static void
 free_label_info_list(LabelInfo *label_info_list[]);
 
 
 static void
-stack_push(int e);
+stack_push(WsInt e);
 
-static int
+static WsInt
 stack_pop(void);
 
 static void
@@ -188,7 +196,7 @@ static void
 filter(FILE *fp, const char *code);
 
 
-static int stack[STACK_SIZE] = {0};
+static WsInt stack[STACK_SIZE] = {0};
 static size_t stack_idx = 0;
 
 static LabelInfo *label_info_list[MAX_N_LABEL] = {NULL};
@@ -430,28 +438,28 @@ execute(const unsigned char *bytecode)
         stack_push(heap[a]);
         break;
       case FLOW_GOSUB:
-        call_stack[call_stack_idx++] = (size_t) (ADDR_DIFF(bytecode, base)) + sizeof(WsInt);
+        call_stack[call_stack_idx++] = (size_t) (ADDR_DIFF(bytecode, base)) + sizeof(WsAddrInt);
         bytecode++;
-        bytecode = &base[*((const WsInt *) bytecode)] - 1;
+        bytecode = &base[*((const WsAddrInt *) bytecode)] - 1;
         break;
       case FLOW_JUMP:
         bytecode++;
-        bytecode = &base[*((const WsInt *) bytecode)] - 1;
+        bytecode = &base[*((const WsAddrInt *) bytecode)] - 1;
         break;
       case FLOW_BEZ:
         if (!stack_pop()) {
           bytecode++;
-          bytecode = &base[*((const WsInt *) bytecode)] - 1;
+          bytecode = &base[*((const WsAddrInt *) bytecode)] - 1;
         } else {
-          bytecode += sizeof(WsInt);
+          bytecode += sizeof(WsAddrInt);
         }
         break;
       case FLOW_BLTZ:
         if (stack_pop() < 0) {
           bytecode++;
-          bytecode = &base[*((const WsInt *) bytecode)] - 1;
+          bytecode = &base[*((const WsAddrInt *) bytecode)] - 1;
         } else {
-          bytecode += sizeof(WsInt);
+          bytecode += sizeof(WsAddrInt);
         }
         break;
       case FLOW_ENDSUB:
@@ -782,14 +790,14 @@ process_label_define(unsigned char **bytecode_ptr, const char **code_ptr, unsign
   LabelInfo *label_info = search_label(label);
 
   if (label_info == NULL) {
-    add_label(label, (WsInt) ADDR_DIFF(bytecode, base));
+    add_label(label, (WsAddrInt) ADDR_DIFF(bytecode, base));
   } else {
-    if (label_info->addr == -1) {
+    if (label_info->addr == (WsAddrInt) -1) {
       int i;
       for (i = 0; i < label_info->n_undef; i++) {
-        *((WsInt *) &base[label_info->undef_list[i]]) = (WsInt) ADDR_DIFF(bytecode, base);
+        *((WsAddrInt *) &base[label_info->undef_list[i]]) = (WsAddrInt) ADDR_DIFF(bytecode, base);
       }
-      label_info->addr = (WsInt) ADDR_DIFF(bytecode, base);
+      label_info->addr = (WsAddrInt) ADDR_DIFF(bytecode, base);
       free(label_info->undef_list);
       label_info->undef_list = NULL;
     } else {
@@ -818,13 +826,13 @@ process_label_jump(unsigned char **bytecode_ptr, const char **code_ptr, unsigned
   LabelInfo *label_info = search_label(label);
 
   if (label_info == NULL) {
-    add_undef_label(label, (WsInt) ADDR_DIFF(bytecode, base));
-  } else if (label_info->addr == -1) {
-    label_info->undef_list[label_info->n_undef++] = (WsInt) ADDR_DIFF(bytecode, base);
+    add_undef_label(label, (WsAddrInt) ADDR_DIFF(bytecode, base));
+  } else if (label_info->addr == (WsAddrInt) -1) {
+    label_info->undef_list[label_info->n_undef++] = (WsAddrInt) ADDR_DIFF(bytecode, base);
   } else {
-    *((WsInt *) bytecode) = label_info->addr;
+    *((WsAddrInt *) bytecode) = label_info->addr;
   }
-  bytecode += sizeof(WsInt);
+  bytecode += sizeof(WsAddrInt);
   *code_ptr = code;
   *bytecode_ptr = bytecode;
 }
@@ -836,7 +844,7 @@ process_label_jump(unsigned char **bytecode_ptr, const char **code_ptr, unsigned
  * @param [in] addr    Label position
  */
 static void
-add_label(const char *_label, WsInt addr)
+add_label(const char *_label, WsAddrInt addr)
 {
   char *label = (char *) calloc(strlen(_label) + 1, sizeof(char));
   LabelInfo *label_info = (LabelInfo *) calloc(1, sizeof(LabelInfo));
@@ -862,11 +870,11 @@ add_label(const char *_label, WsInt addr)
  * @param [in] pos     The position given label was found
  */
 static void
-add_undef_label(const char *_label, WsInt pos)
+add_undef_label(const char *_label, WsAddrInt pos)
 {
   char *label = (char *) calloc(strlen(_label) + 1, sizeof(char));
   LabelInfo *label_info = (LabelInfo *) calloc(1, sizeof(LabelInfo));
-  label_info->undef_list = (WsInt *) calloc(UNDEF_LIST_SIZE, sizeof(WsInt));
+  label_info->undef_list = (WsAddrInt *) calloc(UNDEF_LIST_SIZE, sizeof(WsAddrInt));
 
   if (label == NULL || label_info == NULL || label_info->undef_list == NULL) {
     fprintf(stderr, "Failed to allocate heap for label\n");
@@ -876,7 +884,7 @@ add_undef_label(const char *_label, WsInt pos)
 
   label_info->undef_list[0] = pos;
   label_info->label = label;
-  label_info->addr = -1;
+  label_info->addr = (WsAddrInt) -1;
   label_info->n_undef = 1;
   label_info_list[n_label_info++] = label_info;
 }
@@ -908,7 +916,7 @@ free_label_info_list(LabelInfo *label_info_list[])
  * @param [in] e  A number you want to push onto the stack
  */
 static void
-stack_push(int e)
+stack_push(WsInt e)
 {
   assert(stack_idx < LENGTHOF(stack));
   stack[stack_idx++] = e;
@@ -919,7 +927,7 @@ stack_push(int e)
  * @brief Pop out one element from the top of the stack
  * @return  An element of the top of the stack
  */
-static int
+static WsInt
 stack_pop(void)
 {
   assert(stack_idx > 0);
@@ -1539,23 +1547,23 @@ show_mnemonic(FILE *fp, const unsigned char *bytecode, size_t bytecode_size)
         break;
       case FLOW_GOSUB:
         bytecode++;
-        fprintf(fp, "FLOW_GOSUB %d\n", *((const WsInt *) bytecode));
-        bytecode += sizeof(WsInt) - 1;
+        fprintf(fp, "FLOW_GOSUB %u\n", *((const WsAddrInt *) bytecode));
+        bytecode += sizeof(WsAddrInt) - 1;
         break;
       case FLOW_JUMP:
         bytecode++;
-        fprintf(fp, "FLOW_JUMP %d\n", *((const WsInt *) bytecode));
-        bytecode += sizeof(WsInt) - 1;
+        fprintf(fp, "FLOW_JUMP %u\n", *((const WsAddrInt *) bytecode));
+        bytecode += sizeof(WsAddrInt) - 1;
         break;
       case FLOW_BEZ:
         bytecode++;
-        fprintf(fp, "FLOW_BEZ %d\n", *((const WsInt *) bytecode));
-        bytecode += sizeof(WsInt) - 1;
+        fprintf(fp, "FLOW_BEZ %u\n", *((const WsAddrInt *) bytecode));
+        bytecode += sizeof(WsAddrInt) - 1;
         break;
       case FLOW_BLTZ:
         bytecode++;
-        fprintf(fp, "FLOW_BLTZ %d\n", *((const WsInt *) bytecode));
-        bytecode += sizeof(WsInt) - 1;
+        fprintf(fp, "FLOW_BLTZ %u\n", *((const WsAddrInt *) bytecode));
+        bytecode += sizeof(WsAddrInt) - 1;
         break;
       case FLOW_HALT:
         fputs("FLOW_HALT\n", fp);

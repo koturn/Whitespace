@@ -24,6 +24,7 @@ STACK_SIZE        ?= 65536
 HEAP_SIZE         ?= 65536
 CALL_STACK_SIZE   ?= 65536
 WS_INT            ?= int
+WS_ADDR_INT       ?= 'unsigned int'
 INDENT_STR        ?= '"  "'
 MACROS ?= -DMAX_SOURCE_SIZE=$(MAX_SOURCE_SIZE) \
           -DMAX_BYTECODE_SIZE=$(MAX_BYTECODE_SIZE) \
@@ -34,6 +35,7 @@ MACROS ?= -DMAX_SOURCE_SIZE=$(MAX_SOURCE_SIZE) \
           -DHEAP_SIZE=$(HEAP_SIZE) \
           -DCALL_STACK_SIZE=$(CALL_STACK_SIZE) \
           -DWS_INT=$(WS_INT) \
+          -DWS_ADDR_INT=$(WS_ADDR_INT) \
           -DINDENT_STR=$(INDENT_STR)
 
 CC      := gcc

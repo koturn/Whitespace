@@ -45,13 +45,10 @@
 
 #define TRUE  1
 #define FALSE 0
+#define UNDEF_ADDR  ((WsAddrInt) -1)
 #define LENGTHOF(array)  (sizeof(array) / sizeof((array)[0]))
 #define ADDR_DIFF(a, b) \
   ((const unsigned char *) (a) - (const unsigned char *) (b))
-#define IS_SIGNED_INT(itype)  ((itype) (-1) < 0)
-#define BITSIZEOF(var)   (sizeof(var) << 3)
-#define Imax(itype) \
-  (IS_SIGNED_INT(itype) ? (itype) ~((itype) 1 << (BITSIZEOF(itype) - 1)) : (itype) ~(itype) 0)
 #define SWAP(type, a, b) \
   do { \
     type __tmp_swap_var__ = *(a); \
@@ -792,7 +789,7 @@ process_label_define(unsigned char **bytecode_ptr, const char **code_ptr, unsign
   if (label_info == NULL) {
     add_label(label, (WsAddrInt) ADDR_DIFF(bytecode, base));
   } else {
-    if (label_info->addr == (WsAddrInt) -1) {
+    if (label_info->addr == UNDEF_ADDR) {
       int i;
       for (i = 0; i < label_info->n_undef; i++) {
         *((WsAddrInt *) &base[label_info->undef_list[i]]) = (WsAddrInt) ADDR_DIFF(bytecode, base);
@@ -827,7 +824,7 @@ process_label_jump(unsigned char **bytecode_ptr, const char **code_ptr, unsigned
 
   if (label_info == NULL) {
     add_undef_label(label, (WsAddrInt) ADDR_DIFF(bytecode, base));
-  } else if (label_info->addr == (WsAddrInt) -1) {
+  } else if (label_info->addr == UNDEF_ADDR) {
     label_info->undef_list[label_info->n_undef++] = (WsAddrInt) ADDR_DIFF(bytecode, base);
   } else {
     *((WsAddrInt *) bytecode) = label_info->addr;
@@ -884,7 +881,7 @@ add_undef_label(const char *_label, WsAddrInt pos)
 
   label_info->undef_list[0] = pos;
   label_info->label = label;
-  label_info->addr = (WsAddrInt) -1;
+  label_info->addr = UNDEF_ADDR;
   label_info->n_undef = 1;
   label_info_list[n_label_info++] = label_info;
 }

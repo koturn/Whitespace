@@ -59,7 +59,7 @@
 
 enum OpCode {
   FLOW_HALT = 0x00,
-  STACK_PUSH, STACK_COPY, STACK_COPY_TOP, STACK_SLIDE, STACK_SWAP, STACK_DISCARD,
+  STACK_PUSH, STACK_DUP_N, STACK_DUP, STACK_SLIDE, STACK_SWAP, STACK_DISCARD,
   ARITH_ADD, ARITH_SUB, ARITH_MUL, ARITH_DIV, ARITH_MOD,
   HEAP_STORE, HEAP_LOAD,
   FLOW_LABEL, FLOW_GOSUB, FLOW_JUMP, FLOW_BEZ, FLOW_BLTZ, FLOW_ENDSUB,
@@ -142,7 +142,7 @@ static WsInt
 stack_pop(void);
 
 static void
-stack_copy(size_t n);
+stack_dup_n(size_t n);
 
 static void
 stack_slide(size_t n);
@@ -377,13 +377,13 @@ execute(const unsigned char *bytecode)
         stack_push(*((const WsInt *) bytecode));
         bytecode += sizeof(WsInt) - 1;
         break;
-      case STACK_COPY:
+      case STACK_DUP_N:
         bytecode++;
-        stack_copy((size_t) *((const WsInt *) bytecode));
+        stack_dup_n((size_t) *((const WsInt *) bytecode));
         bytecode += sizeof(WsInt) - 1;
         break;
-      case STACK_COPY_TOP:
-        stack_copy(0);
+      case STACK_DUP:
+        stack_dup_n(0);
         break;
       case STACK_SLIDE:
         bytecode++;
@@ -544,7 +544,7 @@ gen_stack_code(unsigned char **bytecode_ptr, const char **code_ptr)
     case '\t':
       switch (*++code) {
         case ' ':
-          *bytecode++ = STACK_COPY;
+          *bytecode++ = STACK_DUP_N;
           *((WsInt *) bytecode) = read_nstr(&code);
           bytecode += sizeof(WsInt);
           break;
@@ -561,7 +561,7 @@ gen_stack_code(unsigned char **bytecode_ptr, const char **code_ptr)
     case '\n':
       switch (*++code) {
         case ' ':
-          *bytecode++ = STACK_COPY;
+          *bytecode++ = STACK_DUP_N;
           *((WsInt *) bytecode) = 0;
           bytecode += sizeof(WsInt);
           break;
@@ -936,7 +936,7 @@ stack_pop(void)
  * @brief Copy the nth item on the stack onto the top of the stack
  */
 static void
-stack_copy(size_t n)
+stack_dup_n(size_t n)
 {
   assert(n < stack_idx && stack_idx < LENGTHOF(stack) - 1);
   stack[stack_idx] = stack[stack_idx - (n + 1)];
@@ -1056,7 +1056,7 @@ print_stack_code(FILE *fp, const char **code_ptr)
     case '\t':
       switch (*++code) {
         case ' ':
-          fprintf(fp, INDENT_STR "copy(%d);\n", read_nstr(&code));
+          fprintf(fp, INDENT_STR "dup_n(%d);\n", read_nstr(&code));
           break;
         case '\t':
           fprintf(fp, INDENT_STR "slide(%d);\n", read_nstr(&code));
@@ -1069,7 +1069,7 @@ print_stack_code(FILE *fp, const char **code_ptr)
     case '\n':
       switch (*++code) {
         case ' ':
-          fputs(INDENT_STR "copy(0);\n", fp);
+          fputs(INDENT_STR "dup_n(0);\n", fp);
           break;
         case '\t':
           fputs(INDENT_STR "swap();\n", fp);
@@ -1282,7 +1282,7 @@ print_code_header(FILE *fp)
   fputs(
       "static int  pop(void);\n"
       "static void push(int e);\n"
-      "static void copy(size_t n);\n"
+      "static void dup_n(size_t n);\n"
       "static void slide(size_t n);\n"
       "static void swap(void);\n"
       "static void arith_add(void);\n"
@@ -1325,7 +1325,7 @@ print_code_footer(FILE *fp)
       INDENT_STR "assert(stack_idx < LENGTHOF(stack));\n"
       INDENT_STR "stack[stack_idx++] = e;\n"
       "}\n\n\n"
-      "static void copy(size_t n)\n"
+      "static void dup_n(size_t n)\n"
       "{\n"
       INDENT_STR "assert(n < stack_idx && stack_idx < LENGTHOF(stack) - 1);\n"
       INDENT_STR "stack[stack_idx] = stack[stack_idx - (n + 1)];\n"
@@ -1502,13 +1502,13 @@ show_mnemonic(FILE *fp, const unsigned char *bytecode, size_t bytecode_size)
         fprintf(fp, "STACK_PUSH %d\n", *((const WsInt *) bytecode));
         bytecode += sizeof(WsInt) - 1;
         break;
-      case STACK_COPY:
+      case STACK_DUP_N:
         bytecode++;
-        fprintf(fp, "STACK_COPY %d\n", *((const WsInt *) bytecode));
+        fprintf(fp, "STACK_DUP_N %d\n", *((const WsInt *) bytecode));
         bytecode += sizeof(WsInt) - 1;
         break;
-      case STACK_COPY_TOP:
-        fprintf(fp, "STACK_COPY_TOP\n");
+      case STACK_DUP:
+        fprintf(fp, "STACK_DUP\n");
         break;
       case STACK_SLIDE:
         bytecode++;

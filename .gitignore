@@ -1,4 +1,7 @@
+getopt/
 *.exe
+*.lib
 *.o
+*.obj
 *.out
 *.ws

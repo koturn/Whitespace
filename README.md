@@ -39,12 +39,23 @@ Options                            | Function
 
 Use [Makefile](Makefile).
 
-```
+```sh
 $ make
 ```
 
-This program uses getopt, so you can compile with gcc only.
+If you want to build with MSVC, use [msvc.mk](msvc.mk).
+[msvc.mk](msvc.mk) is written for nmake.
 
+```sh
+> nmake /f msvc.mk
+```
+
+
+## Dependent libraries
+
+#### MSVC only
+
+- [getopt clone](https://github.com/koturn/getopt)
 
 
 ## References

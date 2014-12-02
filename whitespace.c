@@ -1263,11 +1263,22 @@ print_io_code(FILE *fp, const char **code_ptr)
 static void
 print_code_header(FILE *fp)
 {
-  fprintf(fp,
+  fputs(
       "#include <assert.h>\n"
       "#include <setjmp.h>\n"
       "#include <stdio.h>\n"
-      "#include <stdlib.h>\n\n"
+      "#include <stdlib.h>\n\n", fp);
+  fputs(
+      "#ifndef __cplusplus\n"
+      "#  if defined(_MSC_VER)\n"
+      "#    define inline      __inline\n"
+      "#    define __inline__  __inline\n"
+      "#  elif !defined(__GNUC__) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L)\n"
+      "#    define inline\n"
+      "#    define __inline\n"
+      "#  endif\n"
+      "#endif\n\n", fp);
+  fprintf(fp,
       "#define STACK_SIZE %d\n"
       "#define HEAP_SIZE %d\n"
       "#define CALL_STACK_SIZE %d\n\n"
@@ -1280,24 +1291,27 @@ print_code_header(FILE *fp)
       INDENT_STR "} while (0)\n\n",
       STACK_SIZE, HEAP_SIZE, CALL_STACK_SIZE);
   fputs(
-      "static int  pop(void);\n"
-      "static void push(int e);\n"
-      "static void dup_n(size_t n);\n"
-      "static void slide(size_t n);\n"
-      "static void swap(void);\n"
-      "static void arith_add(void);\n"
-      "static void arith_sub(void);\n"
-      "static void arith_mul(void);\n"
-      "static void arith_div(void);\n"
-      "static void arith_mod(void);\n"
-      "static void heap_store(void);\n"
-      "static void heap_read(void);\n\n", fp);
+      "inline static int  pop(void);\n"
+      "inline static void push(int e);\n"
+      "inline static void dup_n(size_t n);\n"
+      "inline static void slide(size_t n);\n"
+      "inline static void swap(void);\n", fp);
+  fputs(
+      "inline static void arith_add(void);\n"
+      "inline static void arith_sub(void);\n"
+      "inline static void arith_mul(void);\n"
+      "inline static void arith_div(void);\n"
+      "inline static void arith_mod(void);\n", fp);
+  fputs(
+      "inline static void heap_store(void);\n"
+      "inline static void heap_read(void);\n\n", fp);
   fputs(
       "static int stack[STACK_SIZE];\n"
       "static int heap[HEAP_SIZE];\n"
       "static jmp_buf call_stack[CALL_STACK_SIZE];\n"
       "static size_t stack_idx = 0;\n"
-      "static size_t call_stack_idx = 0;\n\n\n"
+      "static size_t call_stack_idx = 0;\n\n\n", fp);
+  fputs(
       "int main(void)\n"
       "{\n", fp);
 }
@@ -1315,62 +1329,68 @@ print_code_footer(FILE *fp)
       INDENT_STR "return EXIT_SUCCESS;\n"
       "}\n\n\n", fp);
   fputs(
-      "static int pop(void)\n"
+      "inline static int pop(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx < LENGTHOF(stack));\n"
       INDENT_STR "return stack[--stack_idx];\n"
-      "}\n\n\n"
-      "static void push(int e)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void push(int e)\n"
       "{\n"
       INDENT_STR "assert(stack_idx < LENGTHOF(stack));\n"
       INDENT_STR "stack[stack_idx++] = e;\n"
-      "}\n\n\n"
-      "static void dup_n(size_t n)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void dup_n(size_t n)\n"
       "{\n"
       INDENT_STR "assert(n < stack_idx && stack_idx < LENGTHOF(stack) - 1);\n"
       INDENT_STR "stack[stack_idx] = stack[stack_idx - (n + 1)];\n"
       INDENT_STR "stack_idx++;\n"
       "}\n\n\n", fp);
   fputs(
-      "static void slide(size_t n)\n"
+      "inline static void slide(size_t n)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > n);\n"
       INDENT_STR "stack[stack_idx - (n + 1)] = stack[stack_idx - 1];\n"
       INDENT_STR "stack_idx -= n;\n"
-      "}\n\n\n"
-      "static void swap(void)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void swap(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "SWAP(int, &stack[stack_idx - 1], &stack[stack_idx - 2]);\n"
       "}\n\n\n", fp);
   fputs(
-      "static void arith_add(void)\n"
+      "inline static void arith_add(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "stack_idx--;\n"
       INDENT_STR "stack[stack_idx - 1] += stack[stack_idx];\n"
-      "}\n\n\n"
-      "static void arith_sub(void)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void arith_sub(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "stack_idx--;\n"
       INDENT_STR "stack[stack_idx - 1] -= stack[stack_idx];\n"
-      "}\n\n\n"
-      "static void arith_mul(void)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void arith_mul(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "stack_idx--;\n"
       INDENT_STR "stack[stack_idx - 1] *= stack[stack_idx];\n"
       "}\n\n\n", fp);
   fputs(
-      "static void arith_div(void)\n"
+      "inline static void arith_div(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "stack_idx--;\n"
       INDENT_STR "assert(stack[stack_idx] != 0);\n"
       INDENT_STR "stack[stack_idx - 1] /= stack[stack_idx];\n"
-      "}\n\n\n"
-      "static void arith_mod(void)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void arith_mod(void)\n"
       "{\n"
       INDENT_STR "assert(stack_idx > 1);\n"
       INDENT_STR "stack_idx--;\n"
@@ -1378,14 +1398,15 @@ print_code_footer(FILE *fp)
       INDENT_STR "stack[stack_idx - 1] %= stack[stack_idx];\n"
       "}\n\n\n", fp);
   fputs(
-      "static void heap_store(void)\n"
+      "inline static void heap_store(void)\n"
       "{\n"
       INDENT_STR "int value = pop();\n"
       INDENT_STR "int addr  = pop();\n"
       INDENT_STR "assert(0 <= addr && addr < (int) LENGTHOF(heap));\n"
       INDENT_STR "heap[addr] = value;\n"
-      "}\n\n\n"
-      "static void heap_read(void)\n"
+      "}\n\n\n", fp);
+  fputs(
+      "inline static void heap_read(void)\n"
       "{\n"
       INDENT_STR "int addr = pop();\n"
       INDENT_STR "assert(0 <= addr && addr < (int) LENGTHOF(heap));\n"

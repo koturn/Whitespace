@@ -1,6 +1,6 @@
 ### This Makefile was written for GNU Make. ###
 ifeq ($(OPT),true)
-	COPTFLAGS  := -flto -Ofast -march=native -DNDEBUG
+	COPTFLAGS  := -flto -Ofast -mtune=native -march=native -DNDEBUG
 	LDOPTFLAGS := -flto -Ofast -s
 else
 ifeq ($(DEBUG),true)

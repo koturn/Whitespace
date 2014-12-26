@@ -4,10 +4,14 @@
  * @author koturn
  */
 #include <assert.h>
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <getopt.h>
+#if defined(_MSC_VER) && defined(_DEBUG)
+#  include <msvcdbg.h>
+#endif
 
 #ifndef MAX_SOURCE_SIZE
 #  define MAX_SOURCE_SIZE  65536

@@ -66,6 +66,11 @@ $(TARGET): $(OBJ)
 $(OBJ): $(SRC)
 
 
+.PHONY: test
+test:
+	./$(TARGET) -h
+
+
 .PHONY: clean
 clean:
 	$(RM) $(TARGET) $(OBJ)

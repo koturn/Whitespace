@@ -1,6 +1,8 @@
 Whitespace
 ==========
 
+[![Build Status](https://travis-ci.org/koturn/Whitespace.png)](https://travis-ci.org/koturn/Whitespace)
+
 Whitespace interpreter and C-translator.
 
 

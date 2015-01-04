@@ -91,6 +91,10 @@ $(MSVCDBG_DIR)/NUL:
 		$(GIT) clone $(MSVCDBG_REPOSITORY)
 
 
+test:
+	$(TARGET) -h
+
+
 clean:
 	$(RM) $(TARGET) $(OBJ)
 cleanobj:

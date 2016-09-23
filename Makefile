@@ -1,20 +1,38 @@
-### This Makefile was written for GNU Make. ###
-ifeq ($(OPT),true)
-	COPTFLAGS  := -flto -Ofast -mtune=native -march=native -DNDEBUG
-	LDOPTFLAGS := -flto -Ofast -s
-else
 ifeq ($(DEBUG),true)
-	COPTFLAGS  := -O0 -g3 -ftrapv -fstack-protector-all -D_FORTIFY_SOURCE=2
-	LDLIBS     := -lssp
+    OPT_CFLAGS  := -O0 -g3 -ftrapv -fstack-protector-all -D_FORTIFY_SOURCE=2
+ifneq ($(shell echo $$OSTYPE),cygwin)
+    OPT_CFLAGS  := $(OPT_CFLAGS) -fsanitize=address -fno-omit-frame-pointer
+endif
+    OPT_LDLIBS  := -lssp
 else
-	COPTFLAGS  := -O3 -DNDEBUG
-	LDOPTFLAGS := -O3 -s
+ifeq ($(OPT),true)
+    OPT_CFLAGS  := -flto -Ofast -march=native -DNDEBUG
+    OPT_LDFLAGS := -flto -s
+else
+ifeq ($(LTO),true)
+    OPT_CFLAGS  := -flto -DNDEBUG
+    OPT_LDFLAGS := -flto
+else
+    OPT_CFLAGS  := -O3 -DNDEBUG
+    OPT_LDFLAGS := -s
 endif
 endif
-C_WARNING_FLAGS := -Wall -Wextra -Wformat=2 -Wstrict-aliasing=2 \
-                   -Wcast-align -Wcast-qual -Wconversion \
-                   -Wfloat-equal -Wpointer-arith -Wswitch-enum \
-                   -Wwrite-strings -pedantic
+endif
+
+WARNING_CFLAGS := \
+    -Wall \
+    -Wextra \
+    -Wcast-align \
+    -Wcast-qual \
+    -Wconversion \
+    -Wfloat-equal \
+    -Wformat=2 \
+    -Wpointer-arith \
+    -Wstrict-aliasing=2 \
+    -Wswitch-enum \
+    -Wwrite-strings \
+    -pedantic
+
 MAX_SOURCE_SIZE   ?= 65536
 MAX_BYTECODE_SIZE ?= 1048576
 MAX_LABEL_LENGTH  ?= 65536
@@ -38,19 +56,26 @@ MACROS ?= -DMAX_SOURCE_SIZE=$(MAX_SOURCE_SIZE) \
           -DWS_ADDR_INT=$(WS_ADDR_INT) \
           -DINDENT_STR=$(INDENT_STR)
 
-CC      := gcc
-CFLAGS  := -pipe $(C_WARNING_FLAGS) $(COPTFLAGS) $(MACROS)
-LDFLAGS := -pipe $(LDOPTFLAGS)
-TARGET  := whitespace
-OBJ     := $(addsuffix .o, $(basename $(TARGET)))
-SRC     := $(OBJ:%.o=%.c)
+CC         := gcc $(if $(STDC), $(addprefix -std=, $(STDC)),)
+MKDIR      := mkdir -p
+CP         := cp
+RM         := rm -f
+CTAGS      := ctags
+CFLAGS     := -pipe $(WARNING_CFLAGS) $(OPT_CFLAGS) $(INCS) $(MACROS)
+LDFLAGS    := -pipe $(OPT_LDFLAGS)
+CTAGSFLAGS := -R --languages=c
+LDLIBS     := $(OPT_LDLIBS)
+TARGET     := whitespace
+OBJS       := $(addsuffix .o, $(basename $(TARGET)))
+SRCS       := $(OBJS:.o=.c)
+DEPENDS    := depends.mk
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(addsuffix .exe, $(TARGET))
 else
     TARGET := $(addsuffix .out, $(TARGET))
 endif
-
+INSTALLED_TARGET := $(if $(PREFIX), $(PREFIX),/usr/local)/bin/$(TARGET)
 
 %.exe:
 	$(CC) $(LDFLAGS) $(filter %.c %.o, $^) $(LDLIBS) -o $@
@@ -58,22 +83,34 @@ endif
 	$(CC) $(LDFLAGS) $(filter %.c %.o, $^) $(LDLIBS) -o $@
 
 
-.PHONY: all
+.PHONY: all test depends syntax ctags install uninstall clean cleanobj
 all: $(TARGET)
+$(TARGET): $(OBJS)
 
-$(TARGET): $(OBJ)
+$(foreach SRC,$(SRCS),$(eval $(subst \,,$(shell $(CC) -MM $(SRC)))))
 
-$(OBJ): $(SRC)
+test: $(TARGET)
+	@./$< -h
 
+depends:
+	$(CC) -MM $(SRCS) > $(DEPENDS)
 
-.PHONY: test
-test:
-	./$(TARGET) -h
+syntax:
+	$(CC) $(SRCS) $(STD_CFLAGS) -fsyntax-only $(WARNING_CFLAGS) $(INCS) $(MACROS)
 
+ctags:
+	$(CTAGS) $(CTAGSFLAGS)
 
-.PHONY: clean
+install: $(INSTALLED_TARGET)
+$(INSTALLED_TARGET): $(TARGET)
+	@[ ! -d $(@D) ] && $(MKDIR) $(@D) || :
+	$(CP) $< $@
+
+uninstall:
+	$(RM) $(INSTALLED_TARGET)
+
 clean:
-	$(RM) $(TARGET) $(OBJ)
-.PHONY: cleanobj
+	$(RM) $(TARGET) $(OBJS)
+
 cleanobj:
-	$(RM) $(OBJ)
+	$(RM) $(OBJS)

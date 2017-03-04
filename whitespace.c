@@ -475,11 +475,13 @@ execute(const unsigned char *bytecode)
       case IO_READ_CHAR:
         a = stack_pop();
         assert(0 <= a && a < (int) LENGTHOF(heap));
+        fflush(stdout);
         heap[a] = getchar();
         break;
       case IO_READ_NUM:
         a = stack_pop();
         assert(0 <= a && a < (int) LENGTHOF(heap));
+        fflush(stdout);
         scanf("%d", &heap[a]);
         break;
       case FLOW_HALT:
@@ -1242,10 +1244,16 @@ print_io_code(FILE *fp, const char **code_ptr)
     case '\t':
       switch (*++code) {
         case ' ':
-          fputs(INDENT_STR "heap[pop()] = getchar();\n", fp);
+          fputs(
+              INDENT_STR "fflush(stdout);\n"
+              INDENT_STR "heap[pop()] = getchar();\n",
+              fp);
           break;
         case '\t':
-          fputs(INDENT_STR "scanf(\"%d\", &heap[pop()]);\n", fp);
+          fputs(
+              INDENT_STR "fflush(stdout);\n"
+              INDENT_STR "scanf(\"%d\", &heap[pop()]);\n",
+              fp);
           break;
         case '\n':
           fputs("Undefined I/O command is detected: [TN][TN]\n", stderr);

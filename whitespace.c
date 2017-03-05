@@ -555,12 +555,12 @@ gen_stack_code(unsigned char **bytecode_ptr, const char **code_ptr)
           bytecode += sizeof(WsInt);
           break;
         case '\t':
+          fputs("Undefined Stack manipulation command is detected: [S][TT]\n", stderr);
+          break;
+        case '\n':
           *bytecode++ = STACK_SLIDE;
           *((WsInt *) bytecode) = read_nstr(&code);
           bytecode += sizeof(WsInt);
-          break;
-        case '\n':
-          fputs("Undefined Stack manipulation command is detected: [S][TN]\n", stderr);
           break;
       }
       break;
@@ -1065,10 +1065,10 @@ print_stack_code(FILE *fp, const char **code_ptr)
           fprintf(fp, INDENT_STR "dup_n(%d);\n", read_nstr(&code));
           break;
         case '\t':
-          fprintf(fp, INDENT_STR "slide(%d);\n", read_nstr(&code));
+          fputs("Undefined Stack manipulation command is detected: [S][TT]\n", stderr);
           break;
         case '\n':
-          fputs("Undefined Stack manipulation command is detected: [S][TN]\n", stderr);
+          fprintf(fp, INDENT_STR "slide(%d);\n", read_nstr(&code));
           break;
       }
       break;

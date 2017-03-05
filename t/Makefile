@@ -1,0 +1,94 @@
+ifeq ($(OS),Windows_NT)
+    BIN_SUFFIX := .exe
+else
+    BIN_SUFFIX := .out
+endif
+
+WHITESPACE := $(addsuffix $(BIN_SUFFIX),../whitespace)
+TESTS := $(basename $(sort $(wildcard *.ws)))
+INPUTS_DIR := inputs
+EXPECTS_DIR := expects
+TRANSPILED_DIR := transpiled
+MKDIR := mkdir
+RM := rm -f
+CC := gcc
+CFLAGS := \
+	-pipe \
+	-O2 \
+    -Wall \
+    -Wextra \
+    -Wabi \
+    -Wcast-align \
+    -Wcast-qual \
+    -Wconversion \
+    -Wdisabled-optimization \
+    -Wdouble-promotion \
+    -Wfloat-equal \
+    -Wformat=2 \
+    -Winit-self \
+    -Wlogical-op \
+    -Wmissing-declarations \
+    -Wno-return-local-addr \
+    -Wpointer-arith \
+    -Wredundant-decls \
+    -Wstrict-aliasing=2 \
+    -Wsuggest-attribute=const \
+    -Wsuggest-attribute=format \
+    -Wsuggest-attribute=noreturn \
+    -Wsuggest-attribute=pure \
+    -Wsuggest-final-methods \
+    -Wsuggest-final-types \
+    -Wswitch-enum \
+    -Wundef \
+    -Wunsafe-loop-optimizations \
+    -Wunreachable-code \
+    -Wvector-operation-performance \
+    -Wwrite-strings \
+    -Wc++-compat \
+    -Wbad-function-cast \
+    -Wjump-misses-init \
+    -Wmissing-prototypes \
+    -Wunsuffixed-float-constants \
+	-Wno-unused-label \
+	-Wno-unused-variable \
+	-Werror
+LDFLAGS := -O2
+
+
+define generate-interpreter-test
+$1:
+	@echo -n "Interpreter test: $2.ws ... "
+	@([ -f $(INPUTS_DIR)/$2.txt ] \
+		&& $(WHITESPACE) $2.ws < $(INPUTS_DIR)/$2.txt || $(WHITESPACE) $2.ws) \
+		| diff - $(EXPECTS_DIR)/$2.txt > /dev/null
+	@echo 'Success'
+endef
+
+define generate-transpiler-test
+$1: $(TRANSPILED_DIR)/$2$(BIN_SUFFIX)
+	@echo -n "Transpiler test: $2.ws ... "
+	@([ -f $(INPUTS_DIR)/$2.txt ] && $$< < $(INPUTS_DIR)/$2.txt || $$<) | diff - $(EXPECTS_DIR)/$2.txt
+	@echo 'Success'
+
+$(TRANSPILED_DIR)/$2$(BIN_SUFFIX): $2.ws .FORCE
+	@[ ! -d $$(@D) ] && $(MKDIR) $$(@D) || :
+	@$(WHITESPACE) $$< -t | $(CC) $(CFLAGS) $(LDFLAGS) -xc - -o $$@ > /dev/null
+endef
+
+
+.PHONY: all interpreter binary clean $(TESTS)
+
+.FORCE:
+
+all: interpreter binary
+
+interpreter: $(foreach TEST,$(TESTS),interpreter_$(TEST))
+
+$(foreach TEST,$(TESTS),$(eval $(call generate-interpreter-test,interpreter_$(TEST),$(TEST))))
+
+binary: $(foreach TEST,$(TESTS),transpiler_$(TEST))
+
+$(foreach TEST,$(TESTS),$(eval $(call generate-transpiler-test,transpiler_$(TEST),$(TEST))))
+
+clean:
+	$(RM) $(TRANSPILED_DIR)/*.exe

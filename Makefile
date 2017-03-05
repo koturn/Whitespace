@@ -57,6 +57,7 @@ MACROS ?= -DMAX_SOURCE_SIZE=$(MAX_SOURCE_SIZE) \
           -DINDENT_STR=$(INDENT_STR)
 
 CC         := gcc $(if $(STDC), $(addprefix -std=, $(STDC)),)
+MAKE       := make
 MKDIR      := mkdir -p
 CP         := cp
 RM         := rm -f
@@ -90,7 +91,7 @@ $(TARGET): $(OBJS)
 $(foreach SRC,$(SRCS),$(eval $(subst \,,$(shell $(CC) -MM $(SRC)))))
 
 test: $(TARGET)
-	@./$< -h
+	$(MAKE) -C t/
 
 depends:
 	$(CC) -MM $(SRCS) > $(DEPENDS)

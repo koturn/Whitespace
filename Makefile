@@ -1,9 +1,10 @@
 ifeq ($(DEBUG),true)
     OPT_CFLAGS  := -O0 -g3 -ftrapv -fstack-protector-all -D_FORTIFY_SOURCE=2
-ifneq ($(shell echo $$OSTYPE),cygwin)
-    OPT_CFLAGS  := $(OPT_CFLAGS) -fsanitize=address -fno-omit-frame-pointer
-endif
     OPT_LDLIBS  := -lssp
+ifneq ($(shell echo $$OSTYPE),cygwin)
+    OPT_CFLAGS  += -fsanitize=address -fno-omit-frame-pointer
+    OPT_LDLIBS  += -fsanitize=address
+endif
 else
 ifeq ($(OPT),true)
     OPT_CFLAGS  := -flto -Ofast -march=native -DNDEBUG
@@ -22,16 +23,42 @@ endif
 WARNING_CFLAGS := \
     -Wall \
     -Wextra \
+    -Wabi \
     -Wcast-align \
     -Wcast-qual \
     -Wconversion \
+    -Wdisabled-optimization \
+    -Wdouble-promotion \
     -Wfloat-equal \
     -Wformat=2 \
+    -Winit-self \
+    -Winline \
+    -Wlogical-op \
+    -Wmissing-declarations \
+    -Wno-return-local-addr \
     -Wpointer-arith \
+    -Wredundant-decls \
     -Wstrict-aliasing=2 \
+    -Wsuggest-attribute=const \
+    -Wsuggest-attribute=format \
+    -Wsuggest-attribute=noreturn \
+    -Wsuggest-attribute=pure \
+    -Wsuggest-final-methods \
+    -Wsuggest-final-types \
     -Wswitch-enum \
+    -Wundef \
+    -Wunsafe-loop-optimizations \
+    -Wunreachable-code \
+    -Wvector-operation-performance \
     -Wwrite-strings \
+    -Wc++-compat \
+    -Wbad-function-cast \
+    -Wjump-misses-init \
+    -Wmissing-prototypes \
+    -Wunsuffixed-float-constants \
+    -Wno-unused-result \
     -pedantic
+
 
 MAX_SOURCE_SIZE   ?= 65536
 MAX_BYTECODE_SIZE ?= 1048576
@@ -62,7 +89,8 @@ MKDIR      := mkdir -p
 CP         := cp
 RM         := rm -f
 CTAGS      := ctags
-CFLAGS     := -pipe $(WARNING_CFLAGS) $(OPT_CFLAGS) $(INCS) $(MACROS)
+CFLAGS     := -pipe $(WARNING_CFLAGS) $(OPT_CFLAGS)
+CPPFLAGS   := $(MACROS)
 LDFLAGS    := -pipe $(OPT_LDFLAGS)
 CTAGSFLAGS := -R --languages=c
 LDLIBS     := $(OPT_LDLIBS)
@@ -88,7 +116,7 @@ INSTALLED_TARGET := $(if $(PREFIX), $(PREFIX),/usr/local)/bin/$(TARGET)
 all: $(TARGET)
 $(TARGET): $(OBJS)
 
-$(foreach SRC,$(SRCS),$(eval $(subst \,,$(shell $(CC) -MM $(SRC)))))
+$(foreach SRC,$(SRCS),$(eval $(filter-out \,$(shell $(CC) -MM $(SRC)))))
 
 test: $(TARGET)
 	$(MAKE) -C t/

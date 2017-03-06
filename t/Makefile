@@ -50,6 +50,7 @@ CFLAGS := \
     -Wmissing-prototypes \
     -Wunsuffixed-float-constants \
 	-Wno-unused-label \
+    -Wno-unused-result \
 	-Wno-unused-variable \
 	-Werror
 LDFLAGS := -O2

@@ -1,2 +1,2 @@
-Enter some numbers, then -1 to finish
-Number:Number:Number:Number:Number:Number:Total is 15
+Enter some numbers, then -1 to finish
+Number:Number:Number:Number:Number:Number:Total is 15

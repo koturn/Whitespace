@@ -10,6 +10,8 @@ INPUTS_DIR := inputs
 EXPECTS_DIR := expects
 TRANSPILED_DIR := transpiled
 MKDIR := mkdir
+ECHO := echo
+DIFF := diff -Z --strip-trailing-cr
 RM := rm -f
 CC := gcc
 CFLAGS := \
@@ -51,18 +53,20 @@ LDFLAGS := -O2
 
 define generate-interpreter-test
 $1:
-	@echo -n "Interpreter test: $2.ws ... "
+	@$(ECHO) -n "Interpreter test: $2.ws ... "
 	@([ -f $(INPUTS_DIR)/$2.txt ] \
 		&& $(WHITESPACE) $2.ws < $(INPUTS_DIR)/$2.txt || $(WHITESPACE) $2.ws) \
-		| diff - $(EXPECTS_DIR)/$2.txt > /dev/null
-	@echo 'Success'
+		| $(DIFF) - $(EXPECTS_DIR)/$2.txt > /dev/null
+	@$(ECHO) 'Success'
 endef
 
 define generate-transpiler-test
 $1: $(TRANSPILED_DIR)/$2$(BIN_SUFFIX)
-	@echo -n "Transpiler test: $2.ws ... "
-	@([ -f $(INPUTS_DIR)/$2.txt ] && $$< < $(INPUTS_DIR)/$2.txt || $$<) | diff - $(EXPECTS_DIR)/$2.txt
-	@echo 'Success'
+	@$(ECHO) -n "Transpiler test: $2.ws ... "
+	@([ -f $(INPUTS_DIR)/$2.txt ] \
+		&& $$< < $(INPUTS_DIR)/$2.txt || $$<) \
+		| $(DIFF) - $(EXPECTS_DIR)/$2.txt
+	@$(ECHO) 'Success'
 
 $(TRANSPILED_DIR)/$2$(BIN_SUFFIX): $2.ws .FORCE
 	@[ ! -d $$(@D) ] && $(MKDIR) $$(@D) || :

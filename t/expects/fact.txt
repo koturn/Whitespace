@@ -1,1 +1,1 @@
-Enter a number: 10! = 3628800
+Enter a number: 10! = 3628800

@@ -15,8 +15,8 @@ DIFF := diff -Z --strip-trailing-cr
 RM := rm -f
 CC := gcc
 CFLAGS := \
-	-pipe \
-	-O2 \
+    -pipe \
+    -O2 \
     -Wall \
     -Wextra \
     -Wabi \
@@ -44,10 +44,10 @@ CFLAGS := \
     -Wjump-misses-init \
     -Wmissing-prototypes \
     -Wunsuffixed-float-constants \
-	-Wno-unused-label \
+    -Wno-unused-label \
     -Wno-unused-result \
-	-Wno-unused-variable \
-	-Werror
+    -Wno-unused-variable \
+    -Werror
 LDFLAGS := -O2
 
 

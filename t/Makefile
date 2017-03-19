@@ -14,41 +14,7 @@ ECHO := echo
 DIFF := diff -Z --strip-trailing-cr
 RM := rm -f
 CC := gcc
-CFLAGS := \
-    -pipe \
-    -O2 \
-    -Wall \
-    -Wextra \
-    -Wabi \
-    -Wcast-align \
-    -Wcast-qual \
-    -Wconversion \
-    -Wdouble-promotion \
-    -Wfloat-equal \
-    -Wformat=2 \
-    -Winit-self \
-    -Wlogical-op \
-    -Wmissing-declarations \
-    -Wpointer-arith \
-    -Wredundant-decls \
-    -Wstrict-aliasing=2 \
-    -Wsuggest-attribute=const \
-    -Wsuggest-attribute=noreturn \
-    -Wsuggest-attribute=pure \
-    -Wswitch-enum \
-    -Wundef \
-    -Wunreachable-code \
-    -Wwrite-strings \
-    -Wc++-compat \
-    -Wbad-function-cast \
-    -Wjump-misses-init \
-    -Wmissing-prototypes \
-    -Wunsuffixed-float-constants \
-    -Wno-unused-label \
-    -Wno-unused-result \
-    -Wno-unused-variable \
-    -Werror
-LDFLAGS := -O2
+CFLAGS := -pipe -O2
 
 
 define generate-interpreter-test
@@ -70,7 +36,7 @@ $1: $(TRANSPILED_DIR)/$2$(BIN_SUFFIX)
 
 $(TRANSPILED_DIR)/$2$(BIN_SUFFIX): $2.ws .FORCE
 	@[ ! -d $$(@D) ] && $(MKDIR) $$(@D) || :
-	@$(WHITESPACE) $$< -t | $(CC) $(CFLAGS) $(LDFLAGS) -xc - -o $$@ > /dev/null
+	@$(WHITESPACE) $$< -t | $(CC) $(CFLAGS) -xc - -o $$@ > /dev/null
 endef
 
 

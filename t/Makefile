@@ -14,7 +14,7 @@ ECHO := echo
 DIFF := diff -Z --strip-trailing-cr
 RM := rm -f
 CC := gcc
-CFLAGS := -pipe -O2
+CFLAGS := -pipe -O2 -Wno-unused-result
 
 
 define generate-interpreter-test

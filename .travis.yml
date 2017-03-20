@@ -2,5 +2,5 @@ language: c
 compiler:
   - gcc
   - clang
-script: make CXX="$CXX" && make test
+script: make CC="$CC" && make test
 sudo: false
